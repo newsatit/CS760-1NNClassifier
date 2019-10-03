@@ -2,13 +2,16 @@ from Classifier import Classifier
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
 
 
 def q8():
     df = pd.read_csv('dataset/D2z.txt', sep=' ', names=['x1', 'x2', 'y'])
-    X = df.iloc[:, :2].to_numpy()
-    y = df.iloc[:, 2].to_numpy()
-    classifier = Classifier(np.eye(2))
+    X = df.iloc[:, :-1].to_numpy()
+    y = df.iloc[:, -1].to_numpy()
+    num_features = X.shape[1]
+    classifier = Classifier(np.eye(num_features))
     classifier.fit(X, y)
     y_pred = classifier.classify(X)
 
@@ -30,7 +33,59 @@ def q8():
     plt.show()
     print('FINISH')
 
+def q9(fname = 'dataset/D2a.txt'):
+    df = pd.read_csv(fname, sep=' ')
+    X = df.iloc[:, :-1].to_numpy()
+    y = df.iloc[:, -1].to_numpy()
+    num_features = X.shape[1]
+
+    kf = KFold(n_splits=5, shuffle=True)
+    kf.get_n_splits(X)
+
+    # no normalization
+    sum = 0
+    for train_index, test_index in kf.split(X):
+        classifier = Classifier(np.eye(num_features))
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        classifier.fit(X_train, y_train)
+        y_pred = classifier.classify(X_test)
+        error = 1.0 - accuracy_score(y_test, y_pred)
+        sum += error
+        print("unnormalized error rate: %f"%error)
+    avg = sum/5
+    print("average rate: %f"%avg)
+
+    # normalization
+    sum = 0
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        var = np.var(X_train, axis=0)
+        A = (np.diag(1/var))
+        classifier = Classifier(A)
+        classifier.fit(X_train, y_train)
+        y_pred = classifier.classify(X_test)
+        error = 1.0 - accuracy_score(y_test, y_pred)
+        sum += error
+        print("normalized error rate: %f"%error)
+    avg = sum/5
+    print("average error rate: %f"%avg)
+
+def q10():
+    q9('dataset/D2b.txt')
+
+
+def q12():
+    b = pd.read_csv('dataset/D2b.txt', sep=' ', names=['x1', 'x2', 'y'])
+    b.to_csv('weka/D2b.csv', sep=',', index=False)
+    a = pd.read_csv('dataset/D2a.txt', sep=' ', names=['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'y'])
+    a.to_csv('weka/D2a.csv', sep=',', index=False)
+
 def main():
-    q8()
+    q9()
+    q10()
+
+
 if  __name__ == '__main__':
     main()
